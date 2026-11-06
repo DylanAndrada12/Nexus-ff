@@ -1,0 +1,249 @@
+// NEXUS FF — Esquema de datos
+// SQLite para desarrollo local. Para producción se recomienda PostgreSQL
+// (ver README, sección "Pasar a PostgreSQL").
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  role            String    @default("PLAYER") // ADMIN | CAPTAIN | PLAYER
+  suspended       Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  teamsLed         Team[]                 @relation("TeamCaptain")
+  memberships      TeamMember[]
+  registrations    Registration[]         @relation("RegistrationCaptain")
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  passwordResets   PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  tag       String   @unique
+  logoUrl   String?
+  modality  String // SOLO | DUO | SQUAD
+  captainId String
+  suspended Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  captain       User               @relation("TeamCaptain", fields: [captainId], references: [id])
+  members       TeamMember[]
+  registrations Registration[]
+  invites       TournamentInvite[]
+  results       TournamentResult[]
+
+  @@index([captainId])
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String?
+  gameName String
+  uid      String   @unique
+  role     String   @default("TITULAR") // TITULAR | SUPLENTE
+  joinedAt DateTime @default(now())
+
+  team Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([teamId])
+  @@index([userId])
+}
+
+model Tournament {
+  id                  String    @id @default(cuid())
+  slug                String    @unique
+  name                String
+  bannerUrl           String?
+  description         String
+  whatsappUrl         String?
+  modality            String // SOLO | DUO | SQUAD
+  access              String    @default("PUBLIC") // PUBLIC | PRIVATE
+  status              String    @default("UPCOMING") // UPCOMING | REGISTRATION_OPEN | FULL | ONGOING | FINISHED | CANCELLED
+  startsAt            DateTime
+  registrationClosesAt DateTime?
+  maxTeams            Int
+  prizePool           Int       @default(0)
+  prizeDistribution   String    @default("[]") // JSON [{position, amount}]
+  rules               String    @default("")
+  format              String    @default("POINTS") // POINTS | SINGLE_ELIMINATION | QUALIFIER | LEAGUE | MULTI_ROUND
+  formatDetails       String    @default("")
+  rounds              Int       @default(1)
+  pointsConfig        String    @default("{}") // JSON {killPoints, placements, tiebreaker}
+  allowSubstitutes    Boolean   @default(false)
+  inviteCode          String?
+  featured            Boolean   @default(false)
+  resultsPublishedAt  DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  registrations Registration[]
+  room          Room?
+  results       TournamentResult[]
+  invites       TournamentInvite[]
+
+  @@index([status])
+  @@index([startsAt])
+}
+
+model Registration {
+  id           String    @id @default(cuid())
+  tournamentId String
+  teamId       String
+  captainId    String
+  status       String    @default("CONFIRMED") // PENDING | CONFIRMED | REJECTED | CANCELLED
+  confirmedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  captain    User       @relation("RegistrationCaptain", fields: [captainId], references: [id])
+
+  @@unique([tournamentId, teamId])
+  @@index([status])
+  @@index([captainId])
+}
+
+model Room {
+  id           String    @id @default(cuid())
+  tournamentId String    @unique
+  code         String
+  password     String
+  opensAt      DateTime?
+  instructions String    @default("")
+  published    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+}
+
+model TournamentResult {
+  id           String   @id @default(cuid())
+  tournamentId String
+  teamId       String
+  position     Int
+  kills        Int      @default(0)
+  points       Int      @default(0)
+  prize        Int      @default(0)
+  mvpName      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, teamId])
+  @@index([teamId])
+}
+
+model TournamentInvite {
+  id           String   @id @default(cuid())
+  tournamentId String
+  teamId       String
+  createdAt    DateTime @default(now())
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, teamId])
+  @@index([teamId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // REGISTRATION_CONFIRMED | REGISTRATION_CANCELLED | RESULTS_PUBLISHED | ROOM_PUBLISHED | ANNOUNCEMENT | GENERAL
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  admin User? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SupportMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  status    String   @default("OPEN") // OPEN | RESOLVED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}

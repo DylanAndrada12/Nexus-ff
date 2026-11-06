@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NEXUS FF
 
-## Getting Started
+Plataforma de torneos de Free Fire en Argentina. Los torneos se publican con su fecha, modalidad, cupos, premios y un grupo de WhatsApp exclusivo. La inscripción se coordina en ese grupo y la organización confirma los equipos desde el panel administrativo.
 
-First, run the development server:
+## Desarrollo
 
 ```bash
+npm install
+npm run db:generate
+npm run db:push
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrí [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Comandos
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev            # Servidor de desarrollo
+npm run build          # Build de producción
+npm run typecheck      # Verificación de tipos
+npm run lint           # ESLint
+npm run db:studio      # Prisma Studio
+npm run admin:create   # Crear usuario administrador
+```
 
-## Learn More
+## Variables de entorno
 
-To learn more about Next.js, take a look at the following resources:
+Copiá `.env.example` a `.env`. Las variables principales son `DATABASE_URL`, `SESSION_SECRET` y `APP_URL`. El correo es opcional (`RESEND_API_KEY`, `EMAIL_FROM`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Documentación
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+El estado completo del proyecto, la arquitectura y las tareas pendientes están en [`PROJECT_STATUS.md`](./PROJECT_STATUS.md).
